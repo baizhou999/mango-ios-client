@@ -16,9 +16,9 @@ platform :ios do
 
     auth_args = [
       "-allowProvisioningUpdates",
-      "-authenticationKeyPath '#{api_key[:key_filepath]}'",
-      "-authenticationKeyID #{api_key[:key_id]}",
-      "-authenticationKeyIssuerID #{api_key[:issuer_id]}",
+      "-authenticationKeyPath #{key_path}",
+      "-authenticationKeyID #{ENV.fetch('ASC_KEY_ID')}",
+      "-authenticationKeyIssuerID #{ENV.fetch('ASC_ISSUER_ID')}",
       "DEVELOPMENT_TEAM=#{ENV.fetch('TEAM_ID')}",
       "PRODUCT_BUNDLE_IDENTIFIER=#{ENV.fetch('BUNDLE_ID', 'app.mango.im.ios')}",
       "CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER', '1')}"
