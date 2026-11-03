@@ -21,6 +21,7 @@ platform :ios do
       "-authenticationKeyIssuerID #{ENV.fetch('ASC_ISSUER_ID')}",
       "DEVELOPMENT_TEAM=#{ENV.fetch('TEAM_ID')}",
       "PRODUCT_BUNDLE_IDENTIFIER=#{ENV.fetch('BUNDLE_ID', 'app.mango.im.ios')}",
+      "CODE_SIGNING_ALLOWED=NO",
       "CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER', '1')}"
     ].join(" ")
 
@@ -33,7 +34,7 @@ platform :ios do
       derived_data_path: "build/DerivedData",
       buildlog_path: "build/logs",
       xcargs: auth_args,
-      export_xcargs: "-allowProvisioningUpdates",
+      export_xcargs: "-allowProvisioningUpdates -authenticationKeyPath #{key_path} -authenticationKeyID #{ENV.fetch('ASC_KEY_ID')} -authenticationKeyIssuerID #{ENV.fetch('ASC_ISSUER_ID')}",
       clean: true
     )
 
