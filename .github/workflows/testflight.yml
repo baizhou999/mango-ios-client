@@ -1,0 +1,44 @@
+name: TestFlight POC
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ios-testflight-poc
+
+jobs:
+  beta:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: ios-testflight-poc
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build and upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+          BUNDLE_ID: ${{ secrets.BUNDLE_ID || 'app.mango.im.ios' }}
+        run: bundle exec fastlane beta
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: ios-testflight-poc/build/logs
+          if-no-files-found: ignore

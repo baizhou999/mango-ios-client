@@ -1,0 +1,43 @@
+name: Mango
+options:
+  bundleIdPrefix: app.mango.im
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+targets:
+  Mango:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: Assets.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.mango.im.ios
+        PRODUCT_NAME: Mango
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: "NO"
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: 芒果客户端
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleInfoDictionaryVersion: "6.0"
+        CFBundleName: $(PRODUCT_NAME)
+        CFBundlePackageType: APPL
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        ITSAppUsesNonExemptEncryption: false
+        LSRequiresIPhoneOS: true
+        UIApplicationSupportsIndirectInputEvents: true
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
