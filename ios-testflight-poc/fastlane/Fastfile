@@ -34,7 +34,7 @@ platform :ios do
       derived_data_path: "build/DerivedData",
       buildlog_path: "build/logs",
       xcargs: auth_args,
-      export_xcargs: "-allowProvisioningUpdates -authenticationKeyPath #{key_path} -authenticationKeyID #{ENV.fetch('ASC_KEY_ID')} -authenticationKeyIssuerID #{ENV.fetch('ASC_ISSUER_ID')}",
+      export_xcargs: "-allowProvisioningUpdates",
       clean: true
     )
 
