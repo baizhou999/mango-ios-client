@@ -21,16 +21,23 @@ platform :ios do
       team_id: ENV.fetch("TEAM_ID")
     )
 
-    # 创建 App Store provisioning profile
-    sigh(
+    # 创建 App Store provisioning profile，返回 UUID
+    profile_uuid = sigh(
       api_key: api_key,
       app_identifier: ENV.fetch("BUNDLE_ID", "app.mango.im.ios"),
       team_id: ENV.fetch("TEAM_ID"),
       adhoc: false
     )
 
-    # 切换到 Manual 签名，使用 distribution profile
-    disable_automatic_code_signing(path: "Mango.xcodeproj")
+    # 设置 Manual 签名 + 指定 distribution profile
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "Mango.xcodeproj",
+      team_id: ENV.fetch("TEAM_ID"),
+      bundle_identifier: ENV.fetch("BUNDLE_ID", "app.mango.im.ios"),
+      code_sign_identity: "Apple Distribution",
+      profile_uuid: profile_uuid
+    )
 
     build_app(
       project: "Mango.xcodeproj",
