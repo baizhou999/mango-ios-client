@@ -1,4 +1,4 @@
-name: TestFlight POC
+name: Build unsigned IPA
 
 on:
   workflow_dispatch:
@@ -8,11 +8,9 @@ defaults:
     working-directory: ios-testflight-poc
 
 jobs:
-  beta:
+  build:
     runs-on: macos-15
     timeout-minutes: 30
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -30,28 +28,16 @@ jobs:
 
       - name: Select latest Xcode
         run: |
-          echo "Available Xcode versions:"
-          ls -d /Applications/Xcode_*.app 2>/dev/null || true
           LATEST=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)
-          echo "Selecting: ${LATEST}"
           sudo xcode-select -s "${LATEST}"
           xcodebuild -version
 
-      - name: Build and upload to TestFlight
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
-          TEAM_ID: ${{ secrets.TEAM_ID }}
-          BUNDLE_ID: ${{ secrets.BUNDLE_ID || 'app.mango.im.ios' }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build unsigned IPA
         run: bundle exec fastlane beta
 
-      - name: Upload build logs
-        if: always()
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs
-          path: ios-testflight-poc/build/logs
-          if-no-files-found: ignore
+          name: Mango-unsigned-ipa
+          path: ios-testflight-poc/build/ipa/Mango.ipa
+          if-no-files-found: error

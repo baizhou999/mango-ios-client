@@ -1,95 +1,18 @@
 default_platform(:ios)
 
 platform :ios do
-  desc "Archive the app and upload it to TestFlight"
+  desc "Build an unsigned IPA for users to sign and install themselves"
   lane :beta do
-    bundle_id = ENV.fetch("BUNDLE_ID", "app.mango.im.ios")
-    team_id = ENV.fetch("TEAM_ID")
-
-    key_path = File.expand_path("build/AuthKey.p8", Dir.pwd)
-    FileUtils.mkdir_p(File.dirname(key_path))
-    File.write(key_path, ENV.fetch("ASC_KEY_CONTENT"))
-
-    api_key = app_store_connect_api_key(
-      key_id: ENV.fetch("ASC_KEY_ID"),
-      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
-      key_filepath: key_path,
-      in_house: false
-    )
-
-    # 用 GitHub Actions 的 GITHUB_TOKEN 作为 match 的 git 认证（免去单独配置 PAT）
-    git_token = ENV["GITHUB_TOKEN"]
-    UI.user_error!("GITHUB_TOKEN 未注入，请在 workflow 中显式传入") if git_token.to_s.empty?
-
-    # 创建临时 keychain，避免 codesign 在无界面 CI 上弹授权框导致卡死
-    keychain_name = "mango-ci.keychain"
-    keychain_password = "mango-ci-keychain-pass"
-    create_keychain(
-      name: keychain_name,
-      password: keychain_password,
-      default_keychain: true,
-      unlock: true,
-      timeout: 3600
-    )
-
-    # 同步/生成 Apple Distribution 证书 + App Store provisioning profile，
-    # 私钥加密后提交到当前仓库的 certs 分支，跨 CI 构建复用（解决私钥丢失问题）
-    match(
-      type: "appstore",
-      app_identifier: bundle_id,
-      api_key: api_key,
-      git_url: "https://github.com/baizhou999/mango-ios-client.git",
-      git_branch: "certs",
-      git_basic_authorization: Base64.strict_encode64("x-access-token:#{git_token}"),
-      keychain_name: keychain_name,
-      keychain_password: keychain_password,
-      readonly: false
-    )
-
-    # 从 match 安装到本机的 provisioning profiles 中定位 UUID
-    profile_uuid = find_profile_uuid(bundle_id)
-    UI.user_error!("未找到 App Store provisioning profile") if profile_uuid.nil?
-
-    # 显式 Manual 签名，指向 distribution profile（避免 CLI 下 Automatic 签名走 development）
-    update_code_signing_settings(
-      use_automatic_signing: false,
-      path: "Mango.xcodeproj",
-      team_id: team_id,
-      bundle_identifier: bundle_id,
-      code_sign_identity: "Apple Distribution",
-      profile_uuid: profile_uuid
-    )
-
     build_app(
       project: "Mango.xcodeproj",
       scheme: "Mango",
       configuration: "Release",
-      export_method: "app-store",
       output_directory: "build/ipa",
       derived_data_path: "build/DerivedData",
       buildlog_path: "build/logs",
-      xcargs: "CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER', '1')}",
+      xcargs: "CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER', '1')} CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO",
+      skip_codesigning: true,
       clean: true
     )
-
-    upload_to_testflight(
-      api_key: api_key,
-      skip_waiting_for_build_processing: true,
-      changelog: "GitHub Actions build #{ENV.fetch('GITHUB_RUN_NUMBER', '1')}"
-    )
-  end
-
-  def find_profile_uuid(bundle_id)
-    dirs = [
-      File.expand_path("~/Library/MobileDevice/Provisioning Profiles"),
-      File.expand_path("~/Library/Developer/Xcode/UserData/Provisioning Profiles")
-    ]
-    dirs.each do |dir|
-      Dir.glob(File.join(dir, "*.mobileprovision")).each do |path|
-        xml = `security cms -D -i "#{path}" 2>/dev/null`
-        return File.basename(path, ".mobileprovision") if xml.include?(bundle_id)
-      end
-    end
-    nil
   end
 end
