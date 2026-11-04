@@ -33,15 +33,18 @@ platform :ios do
       readonly: false
     )
 
-    # 显式 Manual 签名，指向 match 创建的 distribution profile
-    # （避免 CLI 下 Automatic 签名走 development；profile 名由 match 固定生成）
+    # 从 match 安装到本机的 provisioning profiles 中定位 UUID
+    profile_uuid = find_profile_uuid(bundle_id)
+    UI.user_error!("未找到 App Store provisioning profile") if profile_uuid.nil?
+
+    # 显式 Manual 签名，指向 distribution profile（避免 CLI 下 Automatic 签名走 development）
     update_code_signing_settings(
       use_automatic_signing: false,
       path: "Mango.xcodeproj",
       team_id: team_id,
       bundle_identifier: bundle_id,
       code_sign_identity: "Apple Distribution",
-      profile_name: "match AppStore #{bundle_id}"
+      profile_uuid: profile_uuid
     )
 
     build_app(
@@ -61,5 +64,19 @@ platform :ios do
       skip_waiting_for_build_processing: true,
       changelog: "GitHub Actions build #{ENV.fetch('GITHUB_RUN_NUMBER', '1')}"
     )
+  end
+
+  def find_profile_uuid(bundle_id)
+    dirs = [
+      File.expand_path("~/Library/MobileDevice/Provisioning Profiles"),
+      File.expand_path("~/Library/Developer/Xcode/UserData/Provisioning Profiles")
+    ]
+    dirs.each do |dir|
+      Dir.glob(File.join(dir, "*.mobileprovision")).each do |path|
+        xml = `security cms -D -i "#{path}" 2>/dev/null`
+        return File.basename(path, ".mobileprovision") if xml.include?(bundle_id)
+      end
+    end
+    nil
   end
 end
