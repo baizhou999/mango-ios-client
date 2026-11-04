@@ -18,9 +18,8 @@ platform :ios do
     )
 
     # 用 GitHub Actions 的 GITHUB_TOKEN 作为 match 的 git 认证（免去单独配置 PAT）
-    if ENV["GITHUB_TOKEN"]
-      ENV["MATCH_GIT_BASIC_AUTHORIZATION"] = Base64.strict_encode64("x-access-token:#{ENV['GITHUB_TOKEN']}")
-    end
+    git_token = ENV["GITHUB_TOKEN"]
+    UI.user_error!("GITHUB_TOKEN 未注入，请在 workflow 中显式传入") if git_token.to_s.empty?
 
     # 同步/生成 Apple Distribution 证书 + App Store provisioning profile，
     # 私钥加密后提交到当前仓库的 certs 分支，跨 CI 构建复用（解决私钥丢失问题）
@@ -30,21 +29,19 @@ platform :ios do
       api_key: api_key,
       git_url: "https://github.com/baizhou999/mango-ios-client.git",
       git_branch: "certs",
+      git_basic_authorization: Base64.strict_encode64("x-access-token:#{git_token}"),
       readonly: false
     )
 
-    # 从 match 安装到本机的 provisioning profiles 中定位 UUID
-    profile_uuid = find_profile_uuid(bundle_id)
-    UI.user_error!("未找到 App Store provisioning profile") if profile_uuid.nil?
-
-    # 显式 Manual 签名，指向 distribution profile（避免 CLI 下 Automatic 签名走 development）
+    # 显式 Manual 签名，指向 match 创建的 distribution profile
+    # （避免 CLI 下 Automatic 签名走 development；profile 名由 match 固定生成）
     update_code_signing_settings(
       use_automatic_signing: false,
       path: "Mango.xcodeproj",
       team_id: team_id,
       bundle_identifier: bundle_id,
       code_sign_identity: "Apple Distribution",
-      profile_uuid: profile_uuid
+      profile_name: "match AppStore #{bundle_id}"
     )
 
     build_app(
@@ -64,14 +61,5 @@ platform :ios do
       skip_waiting_for_build_processing: true,
       changelog: "GitHub Actions build #{ENV.fetch('GITHUB_RUN_NUMBER', '1')}"
     )
-  end
-
-  def find_profile_uuid(bundle_id)
-    profiles_dir = File.expand_path("~/Library/MobileDevice/Provisioning Profiles")
-    Dir.glob(File.join(profiles_dir, "*.mobileprovision")).each do |path|
-      xml = `security cms -D -i "#{path}" 2>/dev/null`
-      return File.basename(path, ".mobileprovision") if xml.include?(bundle_id)
-    end
-    nil
   end
 end
