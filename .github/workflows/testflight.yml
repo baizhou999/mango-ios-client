@@ -28,6 +28,15 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
+      - name: Select latest Xcode
+        run: |
+          echo "Available Xcode versions:"
+          ls -d /Applications/Xcode_*.app 2>/dev/null || true
+          LATEST=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)
+          echo "Selecting: ${LATEST}"
+          sudo xcode-select -s "${LATEST}"
+          xcodebuild -version
+
       - name: Build and upload to TestFlight
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
