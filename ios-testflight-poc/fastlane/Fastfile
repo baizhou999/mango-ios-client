@@ -3,16 +3,20 @@ default_platform(:ios)
 platform :ios do
   desc "Build an unsigned IPA for users to sign and install themselves"
   lane :beta do
-    build_app(
-      project: "Mango.xcodeproj",
-      scheme: "Mango",
-      configuration: "Release",
-      output_directory: "build/ipa",
-      derived_data_path: "build/DerivedData",
-      buildlog_path: "build/logs",
-      xcargs: "CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER', '1')} CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO",
-      skip_codesigning: true,
-      clean: true
-    )
+    version = ENV.fetch("GITHUB_RUN_NUMBER", "1")
+    build_dir = "build/DerivedData"
+    app_path = "#{build_dir}/Build/Products/Release-iphoneos/Mango.app"
+    payload_dir = "build/ipa/Payload"
+
+    # 直接 build（非 archive），关闭代码签名
+    sh("xcodebuild -project Mango.xcodeproj -scheme Mango -configuration Release -sdk iphoneos -derivedDataPath #{build_dir} CURRENT_PROJECT_VERSION=#{version} CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build")
+
+    # 手动打包成 IPA
+    sh("rm -rf #{payload_dir}")
+    sh("mkdir -p #{payload_dir}")
+    sh("cp -R #{app_path} #{payload_dir}/")
+    sh("cd build/ipa && zip -qry Mango.ipa Payload")
+
+    UI.success("Unsigned IPA generated: build/ipa/Mango.ipa")
   end
 end
