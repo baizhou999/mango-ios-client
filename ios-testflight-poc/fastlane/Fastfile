@@ -4,19 +4,24 @@ platform :ios do
   desc "Build an unsigned IPA for users to sign and install themselves"
   lane :beta do
     version = ENV.fetch("GITHUB_RUN_NUMBER", "1")
-    build_dir = "build/DerivedData"
-    app_path = "#{build_dir}/Build/Products/Release-iphoneos/Mango.app"
-    payload_dir = "build/ipa/Payload"
+
+    # Fastfile 位于 ios-testflight-poc/fastlane，工程根目录为上一级
+    root = File.expand_path("..", __dir__)
+    project_path = File.join(root, "Mango.xcodeproj")
+    build_dir = File.join(root, "build/DerivedData")
+    app_path = File.join(build_dir, "Build/Products/Release-iphoneos/Mango.app")
+    payload_dir = File.join(root, "build/ipa/Payload")
+    ipa_dir = File.join(root, "build/ipa")
 
     # 直接 build（非 archive），关闭代码签名
-    sh("xcodebuild -project Mango.xcodeproj -scheme Mango -configuration Release -sdk iphoneos -derivedDataPath #{build_dir} CURRENT_PROJECT_VERSION=#{version} CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build")
+    sh("xcodebuild -project #{project_path} -scheme Mango -configuration Release -sdk iphoneos -derivedDataPath #{build_dir} CURRENT_PROJECT_VERSION=#{version} CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build")
 
     # 手动打包成 IPA
     sh("rm -rf #{payload_dir}")
     sh("mkdir -p #{payload_dir}")
     sh("cp -R #{app_path} #{payload_dir}/")
-    sh("cd build/ipa && zip -qry Mango.ipa Payload")
+    sh("cd #{ipa_dir} && zip -qry Mango.ipa Payload")
 
-    UI.success("Unsigned IPA generated: build/ipa/Mango.ipa")
+    UI.success("Unsigned IPA generated: #{ipa_dir}/Mango.ipa")
   end
 end
